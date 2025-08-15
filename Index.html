@@ -1,0 +1,1254 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CyberBrew - Communauté des Bières</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            color: #fff;
+            min-height: 100vh;
+        }
+
+        .cyber-header {
+            background: linear-gradient(90deg, #1a1a2e, #16213e, #0f3460);
+            border-bottom: 2px solid #00ffff;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .cyber-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .logo-icon {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(45deg, #00ffff, #ff00ff);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            animation: glow 2s infinite alternate;
+        }
+
+        @keyframes glow {
+            from { box-shadow: 0 0 10px #00ffff; }
+            to { box-shadow: 0 0 20px #00ffff, 0 0 30px #00ffff; }
+        }
+
+        .logo-text {
+            font-size: 2rem;
+            font-weight: bold;
+            background: linear-gradient(45deg, #00ffff, #ff00ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .nav-link {
+            color: #fff;
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: 5px;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .nav-link:hover {
+            background: rgba(0, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .nav-link.active {
+            background: rgba(0, 255, 255, 0.3);
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
+        }
+
+        .cyber-container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        .cyber-card {
+            background: rgba(25, 25, 35, 0.8);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .cyber-title {
+            color: #00ffff;
+            font-size: 1.8rem;
+            margin-bottom: 1.5rem;
+            text-align: center;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+        }
+
+        .filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .filter-input {
+            flex: 1;
+            min-width: 150px;
+            padding: 0.8rem;
+            background: rgba(10, 10, 20, 0.7);
+            border: 1px solid #00ffff;
+            border-radius: 5px;
+            color: white;
+            font-size: 1rem;
+        }
+
+        .filter-input:focus {
+            outline: none;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
+        }
+
+        .cyber-btn {
+            background: linear-gradient(45deg, #00ffff, #0088ff);
+            color: #000;
+            border: none;
+            padding: 0.8rem 1.5rem;
+            border-radius: 5px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .cyber-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 255, 255, 0.4);
+        }
+
+        .cyber-btn-secondary {
+            background: linear-gradient(45deg, #ff00ff, #8800ff);
+        }
+
+        .cyber-btn-danger {
+            background: linear-gradient(45deg, #ff0000, #880000);
+        }
+
+        #map {
+            height: 500px;
+            border-radius: 10px;
+            border: 1px solid #00ffff;
+            margin-bottom: 2rem;
+        }
+
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .beer-card, .pub-card {
+            background: rgba(30, 30, 45, 0.9);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            border-radius: 10px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .beer-card:hover, .pub-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 255, 255, 0.3);
+            border-color: #00ffff;
+        }
+
+        .card-image {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 5px;
+            margin-bottom: 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .card-title {
+            color: #00ffff;
+            font-size: 1.3rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .card-text {
+            color: #ccc;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+        }
+
+        .rating {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .stars {
+            color: #ffd700;
+        }
+
+        .votes {
+            color: #00ffff;
+            font-weight: bold;
+        }
+
+        .vote-buttons {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .vote-btn {
+            flex: 1;
+            padding: 0.5rem;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .upvote {
+            background: rgba(0, 255, 0, 0.2);
+            color: #00ff00;
+        }
+
+        .downvote {
+            background: rgba(255, 0, 0, 0.2);
+            color: #ff0000;
+        }
+
+        .vote-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .trophies-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+        }
+
+        .trophy-card {
+            background: linear-gradient(45deg, #ffd700, #ffa500);
+            color: #000;
+            border-radius: 10px;
+            padding: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 10px rgba(255, 215, 0, 0.5); }
+            50% { box-shadow: 0 0 20px rgba(255, 215, 0, 0.8); }
+            100% { box-shadow: 0 0 10px rgba(255, 215, 0, 0.5); }
+        }
+
+        .trophy-icon {
+            font-size: 2rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #00ffff;
+        }
+
+        .form-input, .form-textarea, .form-select {
+            width: 100%;
+            padding: 0.8rem;
+            background: rgba(10, 10, 20, 0.7);
+            border: 1px solid #00ffff;
+            border-radius: 5px;
+            color: white;
+            font-size: 1rem;
+        }
+
+        .form-textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .form-input:focus, .form-textarea:focus, .form-select:focus {
+            outline: none;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
+        }
+
+        .upload-area {
+            border: 2px dashed #00ffff;
+            border-radius: 5px;
+            padding: 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .upload-area:hover {
+            background: rgba(0, 255, 255, 0.1);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            border: 2px solid #00ffff;
+            border-radius: 10px;
+            padding: 2rem;
+            width: 90%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.5);
+            position: relative;
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+
+        .admin-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .admin-btn {
+            padding: 0.3rem 0.8rem;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+
+        .cyber-footer {
+            background: linear-gradient(90deg, #0f0c29, #302b63);
+            text-align: center;
+            padding: 2rem;
+            border-top: 2px solid #00ffff;
+            margin-top: 3rem;
+        }
+
+        .comments-section {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid rgba(0, 255, 255, 0.2);
+        }
+
+        .comment {
+            background: rgba(10, 10, 20, 0.5);
+            padding: 0.8rem;
+            border-radius: 5px;
+            margin-bottom: 0.5rem;
+        }
+
+        .comment-author {
+            color: #00ffff;
+            font-weight: bold;
+            margin-bottom: 0.2rem;
+        }
+
+        .comment-text {
+            color: #ccc;
+            font-size: 0.9rem;
+        }
+
+        .add-comment {
+            margin-top: 1rem;
+        }
+
+        .comment-input {
+            width: 100%;
+            padding: 0.5rem;
+            background: rgba(10, 10, 20, 0.7);
+            border: 1px solid #00ffff;
+            border-radius: 5px;
+            color: white;
+            margin-bottom: 0.5rem;
+        }
+
+        .stats-card {
+            background: rgba(30, 30, 45, 0.9);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            border-radius: 10px;
+            padding: 1rem;
+            text-align: center;
+        }
+
+        .stats-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #00ffff;
+            margin: 0.5rem 0;
+        }
+
+        .stats-label {
+            color: #ccc;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            .cyber-nav {
+                flex-direction: column;
+                gap: 1rem;
+            }
+            
+            .nav-links {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+            
+            .filters {
+                flex-direction: column;
+            }
+            
+            .nav-link {
+                font-size: 0.8rem;
+                padding: 0.3rem 0.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="cyber-header">
+        <nav class="cyber-nav">
+            <div class="logo">
+                <div class="logo-icon">
+                    <i class="fas fa-beer"></i>
+                </div>
+                <div class="logo-text">CyberBrew</div>
+            </div>
+            <div class="nav-links">
+                <a href="#" class="nav-link active" data-view="map">
+                    <i class="fas fa-map-marked-alt"></i>
+                    Carte
+                </a>
+                <a href="#" class="nav-link" data-view="beers">
+                    <i class="fas fa-beer"></i>
+                    Bières
+                </a>
+                <a href="#" class="nav-link" data-view="pubs">
+                    <i class="fas fa-glass-martini"></i>
+                    Pubs
+                </a>
+                <a href="#" class="nav-link" data-view="trophies">
+                    <i class="fas fa-trophy"></i>
+                    Trophées
+                </a>
+                <a href="#" class="nav-link" data-view="admin">
+                    <i class="fas fa-cog"></i>
+                    Admin
+                </a>
+            </div>
+        </nav>
+    </header>
+
+    <div class="cyber-container">
+        <div class="cyber-card">
+            <h2 class="cyber-title">Filtres de Recherche</h2>
+            <div class="filters">
+                <input type="text" class="filter-input" placeholder="Rechercher une bière..." id="beerFilter">
+                <input type="text" class="filter-input" placeholder="Rechercher un pub..." id="pubFilter">
+                <select class="filter-input" id="locationFilter">
+                    <option value="nearby">À proximité</option>
+                    <option value="all">Tous les lieux</option>
+                </select>
+                <button class="cyber-btn" id="addBeerBtn">
+                    <i class="fas fa-plus"></i>
+                    Ajouter Bière
+                </button>
+                <button class="cyber-btn cyber-btn-secondary" id="addPubBtn">
+                    <i class="fas fa-plus"></i>
+                    Ajouter Pub
+                </button>
+            </div>
+        </div>
+
+        <div id="mapView">
+            <div id="map"></div>
+            
+            <div class="cyber-card">
+                <h2 class="cyber-title">Pubs à Proximité</h2>
+                <div class="grid-container">
+                    <div class="pub-card">
+                        <img src="https://placehold.co/300x200/1a1a2e/eee?text=Le+Cyber+Bar" alt="Le Cyber Bar" class="card-image">
+                        <h3 class="card-title">Le Cyber Bar</h3>
+                        <p class="card-text">123 Rue de la Technologie, Paris</p>
+                        <div class="rating">
+                            <div class="stars">
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star-half-alt"></i>
+                            </div>
+                            <span class="votes">4.7/5</span>
+                        </div>
+                        <p class="card-text">Spécialité: Bières artisanales cyberpunk</p>
+                        <div class="admin-actions">
+                            <button class="admin-btn cyber-btn" onclick="editPub(1)">
+                                <i class="fas fa-edit"></i> Modifier
+                            </button>
+                            <button class="admin-btn cyber-btn-danger" onclick="deletePub(1)">
+                                <i class="fas fa-trash"></i> Supprimer
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="pub-card">
+                        <img src="https://placehold.co/300x200/16213e/eee?text=Neon+Brew" alt="Neon Brew" class="card-image">
+                        <h3 class="card-title">Neon Brew</h3>
+                        <p class="card-text">456 Avenue Digitale, Lyon</p>
+                        <div class="rating">
+                            <div class="stars">
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                                <i class="far fa-star"></i>
+                            </div>
+                            <span class="votes">4.3/5</span>
+                        </div>
+                        <p class="card-text">Ambiance rétro-futuriste et bières locales</p>
+                        <div class="admin-actions">
+                            <button class="admin-btn cyber-btn" onclick="editPub(2)">
+                                <i class="fas fa-edit"></i> Modifier
+                            </button>
+                            <button class="admin-btn cyber-btn-danger" onclick="deletePub(2)">
+                                <i class="fas fa-trash"></i> Supprimer
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="beersView" style="display: none;">
+            <div class="cyber-card">
+                <h2 class="cyber-title">Bières Populaires</h2>
+                <div class="grid-container">
+                    <div class="beer-card">
+                        <img src="https://placehold.co/300x200/0f3460/eee?text=IPA+Cyber" alt="IPA Cyber" class="card-image">
+                        <h3 class="card-title">IPA Cyber</h3>
+                        <p class="card-text">Brasserie TechBrew - 6.5% ABV</p>
+                        <div class="rating">
+                            <div class="stars">
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star-half-alt"></i>
+                            </div>
+                            <span class="votes">124 votes</span>
+                        </div>
+                        <p class="card-text">Une IPA aux arômes intenses de fruits tropicaux et de pin.</p>
+                        <div class="vote-buttons">
+                            <button class="vote-btn upvote" onclick="voteBeer(1, 'up')">
+                                <i class="fas fa-thumbs-up"></i>
+                                +15
+                            </button>
+                            <button class="vote-btn downvote" onclick="voteBeer(1, 'down')">
+                                <i class="fas fa-thumbs-down"></i>
+                                -3
+                            </button>
+                        </div>
+                        <div class="admin-actions">
+                            <button class="admin-btn cyber-btn" onclick="editBeer(1)">
+                                <i class="fas fa-edit"></i> Modifier
+                            </button>
+                            <button class="admin-btn cyber-btn-danger" onclick="deleteBeer(1)">
+                                <i class="fas fa-trash"></i> Supprimer
+                            </button>
+                        </div>
+                        <div class="comments-section">
+                            <div class="comment">
+                                <div class="comment-author">cyber_brewer</div>
+                                <div class="comment-text">Excellente bière ! Parfaite pour les soirées gaming.</div>
+                            </div>
+                            <div class="comment">
+                                <div class="comment-author">beer_nerd</div>
+                                <div class="comment-text">Arômes très présents, j'adore !</div>
+                            </div>
+                            <div class="add-comment">
+                                <input type="text" class="comment-input" placeholder="Ajouter un commentaire...">
+                                <button class="cyber-btn" style="width: 100%;">Commenter</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="beer-card">
+                        <img src="https://placehold.co/300x200/1a1a2e/eee?text=Neon+Lager" alt="Neon Lager" class="card-image">
+                        <h3 class="card-title">Neon Lager</h3>
+                        <p class="card-text">Brasserie Digital - 4.8% ABV</p>
+                        <div class="rating">
+                            <div class="stars">
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                                <i class="far fa-star"></i>
+                            </div>
+                            <span class="votes">89 votes</span>
+                        </div>
+                        <p class="card-text">Une lager rafraîchissante avec des notes de citron et de gingembre.</p>
+                        <div class="vote-buttons">
+                            <button class="vote-btn upvote" onclick="voteBeer(2, 'up')">
+                                <i class="fas fa-thumbs-up"></i>
+                                +12
+                            </button>
+                            <button class="vote-btn downvote" onclick="voteBeer(2, 'down')">
+                                <i class="fas fa-thumbs-down"></i>
+                                -2
+                            </button>
+                        </div>
+                        <div class="admin-actions">
+                            <button class="admin-btn cyber-btn" onclick="editBeer(2)">
+                                <i class="fas fa-edit"></i> Modifier
+                            </button>
+                            <button class="admin-btn cyber-btn-danger" onclick="deleteBeer(2)">
+                                <i class="fas fa-trash"></i> Supprimer
+                            </button>
+                        </div>
+                        <div class="comments-section">
+                            <div class="comment">
+                                <div class="comment-author">digital_hop</div>
+                                <div class="comment-text">Parfaite pour l'été !</div>
+                            </div>
+                            <div class="add-comment">
+                                <input type="text" class="comment-input" placeholder="Ajouter un commentaire...">
+                                <button class="cyber-btn" style="width: 100%;">Commenter</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="pubsView" style="display: none;">
+            <div class="cyber-card">
+                <h2 class="cyber-title">Tous les Pubs</h2>
+                <div class="grid-container">
+                    <div class="pub-card">
+                        <img src="https://placehold.co/300x200/16213e/eee?text=Quantum+Tap" alt="Quantum Tap" class="card-image">
+                        <h3 class="card-title">Quantum Tap</h3>
+                        <p class="card-text">789 Boulevard Quantique, Marseille</p>
+                        <div class="rating">
+                            <div class="stars">
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                            </div>
+                            <span class="votes">4.9/5</span>
+                        </div>
+                        <p class="card-text">Plus de 50 bières artisanales disponibles</p>
+                        <div class="admin-actions">
+                            <button class="admin-btn cyber-btn" onclick="editPub(3)">
+                                <i class="fas fa-edit"></i> Modifier
+                            </button>
+                            <button class="admin-btn cyber-btn-danger" onclick="deletePub(3)">
+                                <i class="fas fa-trash"></i> Supprimer
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="pub-card">
+                        <img src="https://placehold.co/300x200/0f3460/eee?text=Holo+Bar" alt="Holo Bar" class="card-image">
+                        <h3 class="card-title">Holo Bar</h3>
+                        <p class="card-text">321 Rue Holographique, Lille</p>
+                        <div class="rating">
+                            <div class="stars">
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star"></i>
+                                <i class="fas fa-star-half-alt"></i>
+                                <i class="far fa-star"></i>
+                            </div>
+                            <span class="votes">4.2/5</span>
+                        </div>
+                        <p class="card-text">Ambiance futuriste avec projections holographiques</p>
+                        <div class="admin-actions">
+                            <button class="admin-btn cyber-btn" onclick="editPub(4)">
+                                <i class="fas fa-edit"></i> Modifier
+                            </button>
+                            <button class="admin-btn cyber-btn-danger" onclick="deletePub(4)">
+                                <i class="fas fa-trash"></i> Supprimer
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="trophiesView" style="display: none;">
+            <div class="cyber-card">
+                <h2 class="cyber-title">Derniers Trophées</h2>
+                <div class="trophies-grid">
+                    <div class="trophy-card">
+                        <div class="trophy-icon">
+                            <i class="fas fa-trophy"></i>
+                        </div>
+                        <div>
+                            <h3>Première Bière Ajoutée</h3>
+                            <p>cyber_brewer - 15/01/2024</p>
+                        </div>
+                    </div>
+                    
+                    <div class="trophy-card">
+                        <div class="trophy-icon">
+                            <i class="fas fa-trophy"></i>
+                        </div>
+                        <div>
+                            <h3>Top Commentateur</h3>
+                            <p>beer_nerd - 14/01/2024</p>
+                        </div>
+                    </div>
+                    
+                    <div class="trophy-card">
+                        <div class="trophy-icon">
+                            <i class="fas fa-trophy"></i>
+                        </div>
+                        <div>
+                            <h3>Explorateur de Pubs</h3>
+                            <p>travel_hops - 13/01/2024</p>
+                        </div>
+                    </div>
+                    
+                    <div class="trophy-card">
+                        <div class="trophy-icon">
+                            <i class="fas fa-trophy"></i>
+                        </div>
+                        <div>
+                            <h3>Communauté Active</h3>
+                            <p>vote_master - 12/01/2024</p>
+                        </div>
+                    </div>
+                    
+                    <div class="trophy-card">
+                        <div class="trophy-icon">
+                            <i class="fas fa-trophy"></i>
+                        </div>
+                        <div>
+                            <h3>Photographe Pro</h3>
+                            <p>camera_hops - 11/01/2024</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="cyber-card">
+                <h2 class="cyber-title">Collection de Trophées (100 disponibles)</h2>
+                <div class="grid-container">
+                    <div class="stats-card">
+                        <div class="trophy-icon">
+                            <i class="fas fa-trophy"></i>
+                        </div>
+                        <div class="stats-number">25</div>
+                        <div class="stats-label">Trophées débloqués</div>
+                    </div>
+                    
+                    <div class="stats-card">
+                        <div class="trophy-icon">
+                            <i class="fas fa-beer"></i>
+                        </div>
+                        <div class="stats-number">156</div>
+                        <div class="stats-label">Bières ajoutées</div>
+                    </div>
+                    
+                    <div class="stats-card">
+                        <div class="trophy-icon">
+                            <i class="fas fa-glass-martini"></i>
+                        </div>
+                        <div class="stats-number">89</div>
+                        <div class="stats-label">Pubs ajoutés</div>
+                    </div>
+                    
+                    <div class="stats-card">
+                        <div class="trophy-icon">
+                            <i class="fas fa-camera"></i>
+                        </div>
+                        <div class="stats-number">342</div>
+                        <div class="stats-label">Photos uploadées</div>
+                    </div>
+                </div>
+                
+                <div class="grid-container" style="margin-top: 2rem;">
+                    <div class="trophy-card">
+                        <div class="trophy-icon">
+                            <i class="fas fa-trophy"></i>
+                        </div>
+                        <div>
+                            <h3>Collectionneur</h3>
+                            <p>10 bières ajoutées</p>
+                        </div>
+                    </div>
+                    
+                    <div class="trophy-card">
+                        <div class="trophy-icon">
+                            <i class="fas fa-trophy"></i>
+                        </div>
+                        <div>
+                            <h3>Photographe</h3>
+                            <p>20 photos uploadées</p>
+                        </div>
+                    </div>
+                    
+                    <div class="trophy-card">
+                        <div class="trophy-icon">
+                            <i class="fas fa-trophy"></i>
+                        </div>
+                        <div>
+                            <h3>Communauté Active</h3>
+                            <p>50 votes effectués</p>
+                        </div>
+                    </div>
+                    
+                    <div class="trophy-card">
+                        <div class="trophy-icon">
+                            <i class="fas fa-trophy"></i>
+                        </div>
+                        <div>
+                            <h3>Explorateur</h3>
+                            <p>5 pubs visités</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="adminView" style="display: none;">
+            <div class="cyber-card">
+                <h2 class="cyber-title">Panneau d'Administration</h2>
+                <div class="grid-container">
+                    <div class="cyber-card">
+                        <h3 class="card-title">Validation des Bières</h3>
+                        <p class="card-text">2 nouvelles bières en attente de validation</p>
+                        <button class="cyber-btn" onclick="showBeerValidations()">
+                            Voir les validations
+                        </button>
+                    </div>
+                    
+                    <div class="cyber-card">
+                        <h3 class="card-title">Validation des Pubs</h3>
+                        <p class="card-text">1 nouveau pub en attente de validation</p>
+                        <button class="cyber-btn" onclick="showPubValidations()">
+                            Voir les validations
+                        </button>
+                    </div>
+                    
+                    <div class="cyber-card">
+                        <h3 class="card-title">Gestion des Utilisateurs</h3>
+                        <p class="card-text">Modération des comptes et des contenus</p>
+                        <button class="cyber-btn" onclick="showUserManagement()">
+                            Gérer les utilisateurs
+                        </button>
+                    </div>
+                    
+                    <div class="cyber-card">
+                        <h3 class="card-title">Statistiques</h3>
+                        <p class="card-text">Nombre total de bières: 156</p>
+                        <p class="card-text">Nombre total de pubs: 89</p>
+                        <p class="card-text">Nombre d'utilisateurs: 2,341</p>
+                        <p class="card-text">Nombre de commentaires: 1,204</p>
+                    </div>
+                </div>
+                
+                <h3 class="cyber-title" style="margin-top: 2rem;">Contenus à Modérer</h3>
+                <div class="grid-container">
+                    <div class="cyber-card">
+                        <h4 class="card-title">Bière: Quantum Hops IPA</h4>
+                        <p class="card-text">Ajoutée par: new_user_123</p>
+                        <p class="card-text">Statut: En attente</p>
+                        <div class="admin-actions">
+                            <button class="admin-btn cyber-btn" onclick="validateBeer(1)">
+                                <i class="fas fa-check"></i> Valider
+                            </button>
+                            <button class="admin-btn cyber-btn-danger" onclick="rejectBeer(1)">
+                                <i class="fas fa-times"></i> Rejeter
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="cyber-card">
+                        <h4 class="card-title">Pub: Pixel Bar</h4>
+                        <p class="card-text">Ajouté par: beer_lover</p>
+                        <p class="card-text">Statut: En attente</p>
+                        <div class="admin-actions">
+                            <button class="admin-btn cyber-btn" onclick="validatePub(1)">
+                                <i class="fas fa-check"></i> Valider
+                            </button>
+                            <button class="admin-btn cyber-btn-danger" onclick="rejectPub(1)">
+                                <i class="fas fa-times"></i> Rejeter
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Ajout Bière -->
+    <div id="addBeerModal" class="modal">
+        <div class="modal-content">
+            <button class="close-modal">&times;</button>
+            <h2 class="cyber-title">Ajouter une Nouvelle Bière</h2>
+            <form id="beerForm">
+                <div class="form-group">
+                    <label class="form-label">Nom de la Bière</label>
+                    <input type="text" class="form-input" required>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Brasserie</label>
+                    <input type="text" class="form-input" required>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Type de Bière</label>
+                    <select class="form-select">
+                        <option>IPA</option>
+                        <option>Lager</option>
+                        <option>Stout</option>
+                        <option>Pilsner</option>
+                        <option>Wheat Beer</option>
+                        <option>Porter</option>
+                        <option>Sour Beer</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Description</label>
+                    <textarea class="form-textarea" placeholder="Décrivez les arômes, la texture et les saveurs..."></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Votre Commentaire</label>
+                    <textarea class="form-textarea" placeholder="Votre avis personnel sur cette bière..."></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Photo de la Bière</label>
+                    <div class="upload-area">
+                        <i class="fas fa-cloud-upload-alt" style="font-size: 3rem; color: #00ffff; margin-bottom: 1rem;"></i>
+                        <p>Cliquez ou glissez une image ici</p>
+                    </div>
+                </div>
+                
+                <button type="submit" class="cyber-btn" style="width: 100%;">
+                    <i class="fas fa-plus"></i>
+                    Ajouter la Bière
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Ajout Pub -->
+    <div id="addPubModal" class="modal">
+        <div class="modal-content">
+            <button class="close-modal">&times;</button>
+            <h2 class="cyber-title">Ajouter un Nouveau Pub</h2>
+            <form id="pubForm">
+                <div class="form-group">
+                    <label class="form-label">Nom du Pub</label>
+                    <input type="text" class="form-input" required>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Adresse</label>
+                    <input type="text" class="form-input" required>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Description</label>
+                    <textarea class="form-textarea" placeholder="Décrivez l'ambiance, les spécialités..."></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Photo du Pub</label>
+                    <div class="upload-area">
+                        <i class="fas fa-cloud-upload-alt" style="font-size: 3rem; color: #00ffff; margin-bottom: 1rem;"></i>
+                        <p>Cliquez ou glissez une image ici</p>
+                    </div>
+                </div>
+                
+                <button type="submit" class="cyber-btn" style="width: 100%;">
+                    <i class="fas fa-plus"></i>
+                    Ajouter le Pub
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <footer class="cyber-footer">
+        <p>© 2024 CyberBrew - La Communauté des Bières du Futur</p>
+        <p>Connectez-vous avec d'autres passionnés de bière dans le royaume cybernétique</p>
+    </footer>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Initialisation de la carte Leaflet
+        const map = L.map('map').setView([48.8566, 2.3522], 13);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        // Ajout de marqueurs de pubs
+        const pubs = [
+            {
+                id: 1,
+                name: "Le Cyber Bar",
+                position: [48.8566, 2.3522],
+                description: "Spécialité: Bières artisanales cyberpunk"
+            },
+            {
+                id: 2,
+                name: "Neon Brew",
+                position: [48.8606, 2.3376],
+                description: "Ambiance rétro-futuriste"
+            },
+            {
+                id: 3,
+                name: "Quantum Tap",
+                position: [48.8534, 2.3488],
+                description: "Plus de 50 bières artisanales"
+            },
+            {
+                id: 4,
+                name: "Holo Bar",
+                position: [48.8500, 2.3600],
+                description: "Ambiance futuriste avec projections holographiques"
+            }
+        ];
+
+        pubs.forEach(pub => {
+            const marker = L.marker(pub.position).addTo(map);
+            marker.bindPopup(`
+                <div style="color: #000;">
+                    <h3 style="color: #0088ff;">${pub.name}</h3>
+                    <p>${pub.description}</p>
+                </div>
+            `);
+        });
+
+        // Navigation entre les vues
+        document.querySelectorAll('.nav-link').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                // Retirer la classe active de tous les liens
+                document.querySelectorAll('.nav-link').forEach(l => {
+                    l.classList.remove('active');
+                });
+                
+                // Ajouter la classe active au lien cliqué
+                this.classList.add('active');
+                
+                // Masquer toutes les vues
+                document.getElementById('mapView').style.display = 'none';
+                document.getElementById('beersView').style.display = 'none';
+                document.getElementById('pubsView').style.display = 'none';
+                document.getElementById('trophiesView').style.display = 'none';
+                document.getElementById('adminView').style.display = 'none';
+                
+                // Afficher la vue sélectionnée
+                const view = this.getAttribute('data-view');
+                document.getElementById(view + 'View').style.display = 'block';
+            });
+        });
+
+        // Gestion des modals
+        document.getElementById('addBeerBtn').addEventListener('click', function() {
+            document.getElementById('addBeerModal').style.display = 'flex';
+        });
+
+        document.getElementById('addPubBtn').addEventListener('click', function() {
+            document.getElementById('addPubModal').style.display = 'flex';
+        });
+
+        document.querySelectorAll('.close-modal').forEach(button => {
+            button.addEventListener('click', function() {
+                this.closest('.modal').style.display = 'none';
+            });
+        });
+
+        // Fermer le modal en cliquant en dehors
+        window.addEventListener('click', function(event) {
+            if (event.target.classList.contains('modal')) {
+                event.target.style.display = 'none';
+            }
+        });
+
+        // Gestion des votes
+        function voteBeer(beerId, type) {
+            alert(`Vote ${type === 'up' ? 'positif' : 'négatif'} enregistré pour la bière #${beerId}`);
+        }
+
+        // Fonctions d'administration
+        function editBeer(beerId) {
+            alert(`Modification de la bière #${beerId}`);
+        }
+
+        function deleteBeer(beerId) {
+            if (confirm('Êtes-vous sûr de vouloir supprimer cette bière ?')) {
+                alert(`Bière #${beerId} supprimée`);
+            }
+        }
+
+        function editPub(pubId) {
+            alert(`Modification du pub #${pubId}`);
+        }
+
+        function deletePub(pubId) {
+            if (confirm('Êtes-vous sûr de vouloir supprimer ce pub ?')) {
+                alert(`Pub #${pubId} supprimé`);
+            }
+        }
+
+        // Fonctions d'administration
+        function showBeerValidations() {
+            alert('Affichage des validations de bières');
+        }
+
+        function showPubValidations() {
+            alert('Affichage des validations de pubs');
+        }
+
+        function showUserManagement() {
+            alert('Gestion des utilisateurs');
+        }
+
+        function validateBeer(beerId) {
+            alert(`Bière #${beerId} validée`);
+        }
+
+        function rejectBeer(beerId) {
+            if (confirm('Êtes-vous sûr de vouloir rejeter cette bière ?')) {
+                alert(`Bière #${beerId} rejetée`);
+            }
+        }
+
+        function validatePub(pubId) {
+            alert(`Pub #${pubId} validé`);
+        }
+
+        function rejectPub(pubId) {
+            if (confirm('Êtes-vous sûr de vouloir rejeter ce pub ?')) {
+                alert(`Pub #${pubId} rejeté`);
+            }
+        }
+
+        // Géolocalisation
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(function(position) {
+                const userLocation = [position.coords.latitude, position.coords.longitude];
+                map.setView(userLocation, 15);
+                
+                // Ajout d'un marqueur pour la position de l'utilisateur
+                L.marker(userLocation, {
+                    icon: L.divIcon({
+                        className: 'user-marker',
+                        html: '<div style="background: #00ff00; width: 20px; height: 20px; border-radius: 50%; border: 2px solid white;"></div>',
+                        iconSize: [20, 20]
+                    })
+                }).addTo(map).bindPopup("Votre position");
+            });
+        }
+
+        // Soumission des formulaires
+        document.getElementById('beerForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            alert('Bière ajoutée avec succès ! Elle sera validée par la communauté.');
+            document.getElementById('addBeerModal').style.display = 'none';
+            this.reset();
+        });
+
+        document.getElementById('pubForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            alert('Pub ajouté avec succès ! Il sera validé par la communauté.');
+            document.getElementById('addPubModal').style.display = 'none';
+            this.reset();
+        });
+
+        // Filtres
+        document.getElementById('beerFilter').addEventListener('input', function() {
+            console.log('Filtre bière:', this.value);
+        });
+
+        document.getElementById('pubFilter').addEventListener('input', function() {
+            console.log('Filtre pub:', this.value);
+        });
+
+        document.getElementById('locationFilter').addEventListener('change', function() {
+            console.log('Filtre localisation:', this.value);
+        });
+    </script>
+</body>
+</html>
