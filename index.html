@@ -1,440 +1,585 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="utf-8" />
-  <title>BeerFinder — Carte & À proximité</title>
+  <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CyberBrew — BeerFinder</title>
 
-  <!-- Leaflet -->
-  <link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-    crossorigin=""
-  />
-  <script
-    defer
-    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-    crossorigin=""
-  ></script>
+  <!-- Leaflet + Icons -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
 
   <style>
-    :root{
-      --bg:#0f1115; --card:#151922; --muted:#98a2b3; --text:#e6e7ea; --accent:#42b883;
-      --danger:#ef4444; --warn:#f59e0b; --good:#10b981; --border:#222635;
-    }
-    *{box-sizing:border-box}
-    html,body{height:100%}
+    /* ====== RESET & THEME ====== */
+    *{margin:0;padding:0;box-sizing:border-box}
     body{
-      margin:0; font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
-      background:var(--bg); color:var(--text);
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+      color:#fff;
+      min-height:100vh;
     }
-    header{
-      position:sticky; top:0; z-index:20; backdrop-filter: blur(6px);
-      background:linear-gradient(180deg, rgba(15,17,21,.9), rgba(15,17,21,.65));
-      border-bottom:1px solid var(--border);
-    }
-    .container{max-width:1100px; margin:0 auto; padding:12px 16px;}
-    h1{margin:4px 0 10px 0; font-size:20px; letter-spacing:.3px}
-    .filters{
-      display:flex; flex-wrap:wrap; gap:10px; align-items:center; padding:10px 0 8px;
-    }
-    .filters .chip{
-      background:var(--card); border:1px solid var(--border); border-radius:10px;
-      padding:8px 10px; display:flex; gap:8px; align-items:center;
-    }
-    .filters button{
-      background:var(--accent); color:#0b1020; border:none; border-radius:10px; cursor:pointer;
-      padding:10px 12px; font-weight:600; transition: transform .05s ease;
-    }
-    .filters button:active{ transform: translateY(1px) }
-    .filters .ghost{
-      background:transparent; color:var(--text); border:1px solid var(--border);
-    }
-    .filters label{font-size:13px; color:var(--muted)}
-    .filters input[type="range"]{ width:160px }
-    .status{
-      font-size:13px; color:var(--muted); padding:4px 0 10px;
-      min-height:20px; /* anti-jump */
-    }
+    a{color:inherit;text-decoration:none}
 
-    main{ display:grid; grid-template-columns: 1.2fr .8fr; gap:14px; padding:14px 16px; }
-    #map{ width:100%; height:65vh; border-radius:14px; border:1px solid var(--border); }
-    .panel{
-      background:var(--card); border:1px solid var(--border); border-radius:14px; padding:12px;
-      display:flex; flex-direction:column; gap:8px; min-height:65vh;
+    /* ====== HEADER / NAV ====== */
+    .cyber-header{
+      background: linear-gradient(90deg, #1a1a2e, #16213e, #0f3460);
+      border-bottom: 2px solid #00ffff;
+      box-shadow: 0 0 20px rgba(0,255,255,.3);
+      padding:1rem 2rem; position:sticky; top:0; z-index:1000;
     }
-    .panel h2{font-size:16px; margin:0 0 4px}
-    .list{ display:flex; flex-direction:column; gap:8px; overflow:auto; }
-    .card{
-      border:1px solid var(--border); background:#0d111a; border-radius:12px; padding:10px;
+    .cyber-nav{display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap}
+    .logo{display:flex;align-items:center;gap:1rem}
+    .logo-icon{
+      width:50px;height:50px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+      background: linear-gradient(45deg, #00ffff, #ff00ff);
+      font-size:1.5rem; animation:glow 2s infinite alternate;
     }
-    .card .row{ display:flex; justify-content:space-between; gap:10px; align-items:center;}
-    .pill{ font-size:12px; padding:3px 8px; border-radius:999px; border:1px solid var(--border); color:var(--muted)}
-    .distance{ font-weight:700; }
-    .muted{ color:var(--muted); font-size:13px}
-    .msg{ padding:10px 12px; border-radius:10px; font-size:14px;}
-    .msg.ok{ background: rgba(16,185,129,.12); border:1px solid rgba(16,185,129,.3); }
-    .msg.warn{ background: rgba(245,158,11,.12); border:1px solid rgba(245,158,11,.3); }
-    .msg.err{ background: rgba(239,68,68,.12); border:1px solid rgba(239,68,68,.3); }
+    @keyframes glow {from{box-shadow:0 0 10px #00ffff} to{box-shadow:0 0 20px #00ffff,0 0 30px #00ffff}}
+    .logo-text{
+      font-size:2rem;font-weight:bold;background:linear-gradient(45deg,#00ffff,#ff00ff);
+      -webkit-background-clip:text;-webkit-text-fill-color:transparent; text-shadow:0 0 10px rgba(0,255,255,.5);
+    }
+    .nav-links{display:flex;gap:.6rem;flex-wrap:wrap}
+    .nav-link{
+      padding:.5rem 1rem;border-radius:6px;display:flex;align-items:center;gap:.5rem;transition:.2s;
+    }
+    .nav-link:hover{background:rgba(0,255,255,.2);transform:translateY(-2px)}
+    .nav-link.active{background:rgba(0,255,255,.3);box-shadow:0 0 15px rgba(0,255,255,.5)}
 
-    /* Contrôle flottant Leaflet (bouton Localiser) */
-    .leaflet-control.locate{
-      background:var(--card); border:1px solid var(--border); padding:6px; border-radius:10px;
-      box-shadow: 0 6px 16px rgba(0,0,0,.25);
+    /* ====== LAYOUT & CARDS ====== */
+    .cyber-container{max-width:1200px;margin:0 auto;padding:1.2rem}
+    .cyber-card{
+      background: rgba(30, 30, 45, 0.9);
+      border: 1px solid rgba(0, 255, 255, 0.3);
+      border-radius: 10px; padding: 1.2rem; margin-bottom: 1rem;
     }
-    .leaflet-control.locate button{
-      background:var(--accent); color:#0b1020; border:none; border-radius:8px; cursor:pointer;
-      padding:8px 10px; font-weight:700;
-    }
+    .cyber-title{font-size:1.2rem;margin-bottom:.8rem;color:#00ffff}
 
-    @media (max-width: 900px){
-      main{ grid-template-columns: 1fr; }
-      #map{ height:56vh }
+    /* ====== FILTERS ====== */
+    .filters{display:flex;gap:.6rem;flex-wrap:wrap;align-items:center}
+    .filter-input{
+      background:rgba(10,10,20,.7); color:#fff; border:1px solid #00ffff; border-radius:6px;
+      padding:.6rem .7rem; min-width:200px;
+    }
+    .range-group{display:flex;align-items:center;gap:.5rem}
+    .range-group input[type=range]{width:160px}
+    .status{font-size:.9rem;color:#aee;min-height:1.2rem;margin-top:.3rem}
+
+    /* ====== BUTTONS ====== */
+    .cyber-btn{
+      background: linear-gradient(45deg, #00ffff, #0088ff); color:#000; border:none; border-radius:8px;
+      padding:.6rem .9rem; cursor:pointer; font-weight:600; transition:.15s; display:inline-flex; gap:.5rem; align-items:center;
+    }
+    .cyber-btn:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(0,255,255,.25)}
+    .cyber-btn-secondary{background:linear-gradient(45deg,#9b9bff,#6f6fff);color:#fff}
+    .cyber-btn-danger{background:linear-gradient(45deg,#ff0000,#880000);color:#fff}
+    .ghost{background:transparent;border:1px solid #00ffff;color:#00ffff}
+
+    /* ====== MAP & GRID ====== */
+    #map{height:500px;border-radius:10px;border:1px solid #00ffff;margin-bottom:1rem}
+    .grid-container{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1rem}
+    .pub-card,.beer-card{background:rgba(30,30,45,.9);border:1px solid rgba(0,255,255,.3);border-radius:10px;padding:1rem;transition:.2s}
+    .pub-card:hover,.beer-card:hover{transform:translateY(-5px);box-shadow:0 10px 25px rgba(0,255,255,.3);border-color:#00ffff}
+    .card-image{width:100%;height:180px;object-fit:cover;border-radius:6px;margin-bottom:.8rem;border:1px solid rgba(255,255,255,.1)}
+    .card-title{color:#00ffff;font-size:1.1rem;margin-bottom:.3rem}
+    .card-text{color:#ccc;margin-bottom:.6rem;font-size:.95rem}
+    .rating{display:flex;align-items:center;gap:.45rem;margin-bottom:.6rem}
+    .stars{color:#ffd700}
+    .votes{color:#00ffff;font-weight:bold}
+    .pill{display:inline-block;border:1px solid rgba(0,255,255,.35);border-radius:999px;padding:.1rem .5rem;margin:.1rem .2rem 0 0;font-size:.75rem;color:#aee}
+
+    /* ====== TROPHIES ====== */
+    .trophies-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1rem}
+    .trophy-card{
+      background:linear-gradient(45deg,#ffd700,#ffa500); color:#000; border-radius:10px; padding:1rem;
+      display:flex;align-items:center;gap:1rem; animation:pulse 2s infinite;
+    }
+    @keyframes pulse{0%{box-shadow:0 0 10px rgba(255,215,0,.5)}50%{box-shadow:0 0 20px rgba(255,215,0,.8)}100%{box-shadow:0 0 10px rgba(255,215,0,.5)}}
+    .trophy-icon{font-size:2rem}
+
+    /* ====== FORMS & MODALS ====== */
+    .form-group{margin-bottom:1rem}
+    .form-label{display:block;margin-bottom:.35rem;color:#00ffff}
+    .form-input,.form-textarea,.form-select{
+      width:100%; padding:.7rem; background:rgba(10,10,20,.7); border:1px solid #00ffff; border-radius:6px; color:#fff;
+    }
+    .form-textarea{min-height:100px;resize:vertical}
+    .upload-area{
+      border:2px dashed #00ffff;border-radius:6px;padding:1.2rem;text-align:center;cursor:pointer;transition:.2s
+    }
+    .upload-area:hover{background:rgba(0,255,255,.1)}
+    .modal{
+      display:none; position:fixed; inset:0; background:rgba(0,0,0,.8); z-index:1000; align-items:center; justify-content:center;
+    }
+    .modal.open{display:flex}
+    .modal-content{
+      background: linear-gradient(135deg, #1a1a2e, #16213e);
+      border: 2px solid #00ffff;border-radius:10px;padding:1.2rem;width:90%;max-width:600px;max-height:90vh;overflow:auto;position:relative;
+      box-shadow:0 0 30px rgba(0,255,255,.5);
+    }
+    .close-modal{position:absolute;top:.7rem;right:.7rem;background:none;border:none;color:#fff;font-size:1.5rem;cursor:pointer}
+    .admin-actions{display:flex;gap:.5rem;margin-top:.7rem}
+    .admin-btn{padding:.35rem .8rem;border:none;border-radius:6px;cursor:pointer;font-size:.85rem}
+
+    /* ====== FOOTER ====== */
+    .cyber-footer{background: linear-gradient(90deg, #0f0c29, #302b63);text-align:center;padding:1.2rem;border-top:2px solid #00ffff;margin-top:2rem}
+
+    @media (max-width: 768px){
+      .filter-input{min-width:unset;width:100%}
+      .filters{flex-direction:column;align-items:stretch}
     }
   </style>
 </head>
 <body>
-  <header>
-    <div class="container">
-      <h1>🍺 BeerFinder — Carte & À proximité</h1>
-
-      <!-- Barre de filtres -->
-      <div class="filters" role="region" aria-label="Filtres de recherche">
-        <div class="chip">
-          <input type="checkbox" id="toggleNearby" />
-          <label for="toggleNearby">À proximité</label>
-        </div>
-
-        <div class="chip">
-          <label for="radius">Rayon&nbsp;<span id="radiusLabel">2.0</span>&nbsp;km</label>
-          <input type="range" id="radius" min="0.5" max="10" step="0.5" value="2"/>
-        </div>
-
-        <button id="btnLocate" class="ghost" title="Me localiser">📍 Localiser</button>
-
-        <button id="btnReset" class="ghost" title="Effacer la localisation">Réinitialiser</button>
+  <!-- ====== HEADER ====== -->
+  <header class="cyber-header">
+    <nav class="cyber-nav">
+      <div class="logo">
+        <div class="logo-icon"><i class="fas fa-beer"></i></div>
+        <div class="logo-text">CyberBrew</div>
       </div>
-
-      <div id="status" class="status" aria-live="polite"></div>
-    </div>
+      <div class="nav-links">
+        <a href="#" class="nav-link active" data-view="map"><i class="fas fa-map-marked-alt"></i>Carte</a>
+        <a href="#" class="nav-link" data-view="beers"><i class="fas fa-beer"></i>Bières</a>
+        <a href="#" class="nav-link" data-view="pubs"><i class="fas fa-glass-martini"></i>Pubs</a>
+        <a href="#" class="nav-link" data-view="trophies"><i class="fas fa-trophy"></i>Trophées</a>
+        <a href="#" class="nav-link" data-view="admin"><i class="fas fa-cog"></i>Admin</a>
+      </div>
+    </nav>
   </header>
 
-  <main class="container">
-    <div id="map" aria-label="Carte des pubs et bières"></div>
+  <div class="cyber-container">
+    <!-- ====== FILTER BAR ====== -->
+    <div class="cyber-card" role="region" aria-label="Filtres de recherche">
+      <h2 class="cyber-title">Filtres de Recherche</h2>
+      <div class="filters">
+        <input id="beerFilter" class="filter-input" type="text" placeholder="Rechercher une bière.">
+        <input id="pubFilter" class="filter-input" type="text" placeholder="Rechercher un pub.">
 
-    <aside class="panel" aria-label="Résultats">
-      <h2>Résultats <span class="muted">(triés par distance si localisé)</span></h2>
-      <div id="results" class="list" role="list"></div>
-    </aside>
-  </main>
+        <select id="locationFilter" class="filter-input" title="Mode de localisation">
+          <option value="nearby">À proximité</option>
+          <option value="all">Tous les lieux</option>
+        </select>
 
+        <div class="range-group">
+          <label for="radiusRange">Rayon:</label>
+          <strong><span id="radiusVal">2.0</span> km</strong>
+          <input id="radiusRange" type="range" min="0.5" max="10" step="0.5" value="2">
+        </div>
+
+        <button id="btnLocate" class="cyber-btn ghost" title="Me localiser">📍 Localiser</button>
+        <button id="btnResetLoc" class="cyber-btn ghost" title="Effacer la localisation">Réinitialiser</button>
+
+        <span style="flex:1"></span>
+
+        <button id="addBeerBtn" class="cyber-btn"><i class="fas fa-plus"></i>Ajouter Bière</button>
+        <button id="addPubBtn" class="cyber-btn cyber-btn-secondary"><i class="fas fa-plus"></i>Ajouter Pub</button>
+      </div>
+      <div id="status" class="status" aria-live="polite"></div>
+    </div>
+
+    <!-- ====== MAP VIEW ====== -->
+    <div id="mapView">
+      <div id="map" aria-label="Carte des pubs"></div>
+
+      <div class="cyber-card">
+        <h2 class="cyber-title">Pubs à Proximité</h2>
+        <div id="nearbyGrid" class="grid-container"></div>
+      </div>
+    </div>
+
+    <!-- ====== BEERS VIEW ====== -->
+    <div id="beersView" style="display:none">
+      <div class="cyber-card">
+        <h2 class="cyber-title">Bières Populaires</h2>
+        <div class="grid-container">
+          <div class="beer-card">
+            <img class="card-image" src="https://placehold.co/300x200/0f3460/eee?text=IPA+Cyber" alt="IPA Cyber">
+            <h3 class="card-title">IPA Cyber</h3>
+            <p class="card-text">Brasserie TechBrew — 6.5% ABV</p>
+            <div class="rating"><div class="stars"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star-half-alt"></i></div><span class="votes">124 votes</span></div>
+            <div class="admin-actions">
+              <button class="admin-btn cyber-btn"><i class="fas fa-edit"></i> Modifier</button>
+              <button class="admin-btn cyber-btn-danger"><i class="fas fa-trash"></i> Supprimer</button>
+            </div>
+          </div>
+          <div class="beer-card">
+            <img class="card-image" src="https://placehold.co/300x200/16213e/eee?text=Quantum+Stout" alt="Quantum Stout">
+            <h3 class="card-title">Quantum Stout</h3>
+            <p class="card-text">Brasserie MetaBrew — 8.0% ABV</p>
+            <div class="rating"><div class="stars"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="far fa-star"></i></div><span class="votes">78 votes</span></div>
+            <div class="admin-actions">
+              <button class="admin-btn cyber-btn"><i class="fas fa-edit"></i> Modifier</button>
+              <button class="admin-btn cyber-btn-danger"><i class="fas fa-trash"></i> Supprimer</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====== PUBS VIEW (ALL) ====== -->
+    <div id="pubsView" style="display:none">
+      <div class="cyber-card">
+        <h2 class="cyber-title">Tous les Pubs</h2>
+        <div id="allPubsGrid" class="grid-container"></div>
+      </div>
+    </div>
+
+    <!-- ====== TROPHIES VIEW ====== -->
+    <div id="trophiesView" style="display:none">
+      <div class="cyber-card">
+        <h2 class="cyber-title">Derniers Trophées</h2>
+        <div class="trophies-grid">
+          <div class="trophy-card"><div class="trophy-icon"><i class="fas fa-trophy"></i></div><div><h3>Première Bière Ajoutée</h3><p>beer_ninja — 15/01/2024</p></div></div>
+          <div class="trophy-card"><div class="trophy-icon"><i class="fas fa-trophy"></i></div><div><h3>Explorateur de Pubs</h3><p>travel_hops — 13/01/2024</p></div></div>
+          <div class="trophy-card"><div class="trophy-icon"><i class="fas fa-trophy"></i></div><div><h3>Communauté Active</h3><p>vote_master — 12/01/2024</p></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====== ADMIN VIEW ====== -->
+    <div id="adminView" style="display:none">
+      <div class="cyber-card">
+        <h2 class="cyber-title">Panneau d'Administration</h2>
+        <div class="grid-container">
+          <div class="cyber-card">
+            <h3 class="card-title">Validation des Bières</h3>
+            <p class="card-text">2 nouvelles bières en attente de validation</p>
+            <button class="cyber-btn" onclick="console.log('Voir les validations bières')">Voir les validations</button>
+          </div>
+          <div class="cyber-card">
+            <h3 class="card-title">Validation des Pubs</h3>
+            <p class="card-text">1 nouveau pub en attente de validation</p>
+            <button class="cyber-btn" onclick="console.log('Voir les validations pubs')">Voir les validations</button>
+          </div>
+          <div class="cyber-card">
+            <h3 class="card-title">Statistiques</h3>
+            <p class="card-text">Nombre total de bières: 156</p>
+            <p class="card-text">Nombre total de pubs: 89</p>
+            <p class="card-text">Nombre d'utilisateurs: 2 341</p>
+            <p class="card-text">Nombre de commentaires: 1 204</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ====== MODAL: ADD BEER ====== -->
+  <div id="addBeerModal" class="modal" aria-hidden="true">
+    <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="titleAddBeer">
+      <button class="close-modal" data-close>&times;</button>
+      <h2 id="titleAddBeer" class="cyber-title">Ajouter une Nouvelle Bière</h2>
+      <form id="beerForm">
+        <div class="form-group"><label class="form-label">Nom de la Bière</label><input class="form-input" required></div>
+        <div class="form-group"><label class="form-label">Brasserie</label><input class="form-input" required></div>
+        <div class="form-group">
+          <label class="form-label">Type de Bière</label>
+          <select class="form-select">
+            <option>IPA</option><option>Lager</option><option>Stout</option><option>Pilsner</option><option>Wheat Beer</option><option>Porter</option><option>Sour Beer</option>
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label">Description</label><textarea class="form-textarea" placeholder="Décrivez les arômes, la texture et les saveurs."></textarea></div>
+        <div class="form-group"><label class="form-label">Votre Commentaire</label><textarea class="form-textarea" placeholder="Votre avis personnel sur cette bière."></textarea></div>
+        <div class="form-group">
+          <label class="form-label">Photo de la Bière</label>
+          <div class="upload-area"><i class="fas fa-cloud-upload-alt" style="font-size:2rem;color:#00ffff;margin-bottom:.6rem;"></i><p>Cliquez ou glissez une image ici</p></div>
+        </div>
+        <button type="submit" class="cyber-btn" style="width:100%"><i class="fas fa-plus"></i>Ajouter la Bière</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ====== MODAL: ADD PUB ====== -->
+  <div id="addPubModal" class="modal" aria-hidden="true">
+    <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="titleAddPub">
+      <button class="close-modal" data-close>&times;</button>
+      <h2 id="titleAddPub" class="cyber-title">Ajouter un Nouveau Pub</h2>
+      <form id="pubForm">
+        <div class="form-group"><label class="form-label">Nom du Pub</label><input class="form-input" required></div>
+        <div class="form-group"><label class="form-label">Adresse</label><input class="form-input" required></div>
+        <div class="form-group"><label class="form-label">Description</label><textarea class="form-textarea" placeholder="Décrivez l'ambiance, les spécialités."></textarea></div>
+        <div class="form-group">
+          <label class="form-label">Photo du Pub</label>
+          <div class="upload-area"><i class="fas fa-cloud-upload-alt" style="font-size:2rem;color:#00ffff;margin-bottom:.6rem;"></i><p>Cliquez ou glissez une image ici</p></div>
+        </div>
+        <button type="submit" class="cyber-btn" style="width:100%"><i class="fas fa-plus"></i>Ajouter le Pub</button>
+      </form>
+    </div>
+  </div>
+
+  <footer class="cyber-footer">
+    <p>© 2025 CyberBrew — La Communauté des Bières</p>
+    <p>Version démo statique (prochaine étape : Supabase)</p>
+  </footer>
+
+  <!-- ====== SCRIPTS ====== -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    // ---------------------------
-    // DÉMO: données statiques
-    // Remplacera plus tard par Supabase (pubs, bières, etc.)
-    // ---------------------------
-    const PUBS_DEMO = [
-      { id: "p1", name: "Le Houblon Joyeux", city:"Paris 3",   lat:48.8646, lng:2.3522, price:"€€", tags:["craft","ipa"] },
-      { id: "p2", name: "La Capsule",        city:"Paris 10",  lat:48.8757, lng:2.3570, price:"€€", tags:["belge","trappiste"] },
-      { id: "p3", name: "Mikkeller Bar",     city:"Paris 9",   lat:48.8765, lng:2.3361, price:"€€€", tags:["craft","sour"] },
-      { id: "p4", name: "Brewdog",           city:"Paris 2",   lat:48.8673, lng:2.3429, price:"€€€", tags:["craft","ipa"] },
-      { id: "p5", name: "Paname Brewing",    city:"Paris 19",  lat:48.8867, lng:2.3738, price:"€€", tags:["brewpub","lager"] },
+    // =========================
+    // Données démo (remplaçables via Supabase plus tard)
+    // =========================
+    const PUBS = [
+      { id:1, name:"Le Cyber Bar", city:"Paris", lat:48.8566, lng:2.3522, img:"https://placehold.co/600x360/1a1a2e/eee?text=Le+Cyber+Bar", rating:4.7, tags:["craft","ipa"], desc:"Spécialité: Bières artisanales cyberpunk" },
+      { id:2, name:"Neon Brew", city:"Lyon", lat:45.7640, lng:4.8357, img:"https://placehold.co/600x360/16213e/eee?text=Neon+Brew", rating:4.3, tags:["local","retro"], desc:"Ambiance rétro-futuriste et bières locales" },
+      { id:3, name:"Quantum Tap", city:"Marseille", lat:43.2965, lng:5.3698, img:"https://placehold.co/600x360/0f3460/eee?text=Quantum+Tap", rating:4.9, tags:["brewpub","lager"], desc:"Plus de 50 bières artisanales disponibles" },
+      { id:4, name:"Holo Bar", city:"Lille", lat:50.6292, lng:3.0573, img:"https://placehold.co/600x360/0f3460/eee?text=Holo+Bar", rating:4.2, tags:["holo","future"], desc:"Ambiance futuriste avec projections holographiques" },
+      { id:5, name:"Paname Brewing", city:"Paris 19", lat:48.8867, lng:2.3738, img:"https://placehold.co/600x360/1a1a2e/eee?text=Paname+Brewing", rating:4.5, tags:["canal","terrasse"], desc:"Brewpub sur canal — vue au top" },
+      { id:6, name:"Brewdog Paris", city:"Paris 2", lat:48.8673, lng:2.3429, img:"https://placehold.co/600x360/1a1a2e/eee?text=Brewdog", rating:4.4, tags:["craft","burger"], desc:"Large choix IPA & snacks" },
+      { id:7, name:"La Capsule", city:"Paris 10", lat:48.8757, lng:2.3570, img:"https://placehold.co/600x360/1a1a2e/eee?text=La+Capsule", rating:4.6, tags:["belge","trappiste"], desc:"Sélection belge & trappistes" },
+      { id:8, name:"Mikkeller Bar", city:"Paris 9", lat:48.8765, lng:2.3361, img:"https://placehold.co/600x360/1a1a2e/eee?text=Mikkeller", rating:4.4, tags:["sour","craft"], desc:"Acidulées & éditions limitées" },
     ];
 
-    // ---------------------------
-    // ÉTAT (persistance locale)
-    // ---------------------------
-    const LS_KEYS = {
-      RADIUS: "beerfinder.radiusKm",
-      NEARBY: "beerfinder.nearby",
-      LOC: "beerfinder.lastLocation", // {lat,lng,ts}
+    // =========================
+    // State & Helpers
+    // =========================
+    const LS = {
+      RADIUS: 'bf.radiusKm',
+      MODE: 'bf.mode',     // 'nearby' | 'all'
+      LOC: 'bf.loc',       // {lat,lng,ts}
     };
-
     const els = {
+      mapView: document.getElementById('mapView'),
+      beersView: document.getElementById('beersView'),
+      pubsView: document.getElementById('pubsView'),
+      trophiesView: document.getElementById('trophiesView'),
+      adminView: document.getElementById('adminView'),
+
       status: document.getElementById('status'),
-      results: document.getElementById('results'),
-      radius: document.getElementById('radius'),
-      radiusLabel: document.getElementById('radiusLabel'),
-      toggleNearby: document.getElementById('toggleNearby'),
+      locationFilter: document.getElementById('locationFilter'),
+      radius: document.getElementById('radiusRange'),
+      radiusVal: document.getElementById('radiusVal'),
       btnLocate: document.getElementById('btnLocate'),
-      btnReset: document.getElementById('btnReset'),
-      map: document.getElementById('map'),
+      btnResetLoc: document.getElementById('btnResetLoc'),
+      nearbyGrid: document.getElementById('nearbyGrid'),
+      allPubsGrid: document.getElementById('allPubsGrid'),
+      beerFilter: document.getElementById('beerFilter'),
+      pubFilter: document.getElementById('pubFilter'),
     };
 
-    // Charger préférences
-    const initRadius = parseFloat(localStorage.getItem(LS_KEYS.RADIUS) || "2");
-    const initNearby = localStorage.getItem(LS_KEYS.NEARBY) === "true";
-    els.radius.value = isFinite(initRadius) ? initRadius : 2;
-    els.radiusLabel.textContent = Number(els.radius.value).toFixed(1);
-    els.toggleNearby.checked = initNearby;
+    function setStatus(html){ els.status.innerHTML = html || ''; }
+    function escapeHtml(s){return String(s).replace(/[&<>"'`=\/]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','`':'&#96;','=':'&#61;','/':'&#47;'}[c]))}
+    function km(m){return (m/1000).toFixed(2) + ' km'}
 
-    // ---------------------------
-    // CARTE
-    // ---------------------------
-    const map = L.map('map', {
-      zoomControl: true,
-      minZoom: 2,
-      worldCopyJump: true,
-    }).setView([48.8566, 2.3522], 12); // Paris par défaut
-
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution: '&copy; OpenStreetMap'
-    }).addTo(map);
-
-    // Contrôle flottant "Localiser"
-    const LocateControl = L.Control.extend({
-      onAdd: function() {
-        const div = L.DomUtil.create('div', 'leaflet-control locate');
-        const btn = L.DomUtil.create('button', '', div);
-        btn.type = 'button';
-        btn.textContent = '📍 Localiser';
-        btn.title = 'Me localiser';
-        btn.addEventListener('click', () => handleLocate());
-        return div;
-      },
-      onRemove(){},
-      options: { position: 'bottomright' }
-    });
-    map.addControl(new LocateControl());
-
-    // Calques
+    // =========================
+    // Map (Leaflet)
+    // =========================
+    const map = L.map('map').setView([48.8566, 2.3522], 12); // Paris par défaut
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OpenStreetMap'}).addTo(map);
     const layerPubs = L.layerGroup().addTo(map);
-    let userMarker = null;
-    let userCircle = null;
+    let userMarker = null, userCircle = null;
 
-    // ---------------------------
-    // MARQUEURS PUBS
-    // ---------------------------
-    const markerIndex = new Map(); // id -> marker
-    function renderPubs(pubs){
+    function markerForPub(pub){
+      return L.marker([pub.lat, pub.lng]).bindPopup(`
+        <div style="color:#000">
+          <strong>${escapeHtml(pub.name)}</strong><br/>
+          <span>${escapeHtml(pub.city)}</span><br/>
+          <small>${escapeHtml(pub.desc)}</small><br/>
+          ${pub.tags.map(t=>`<span style="border:1px solid #0bf;padding:0 4px;border-radius:999px;margin-right:4px">${escapeHtml(t)}</span>`).join('')}
+        </div>
+      `);
+    }
+
+    function renderMarkers(pubs){
       layerPubs.clearLayers();
-      markerIndex.clear();
-      pubs.forEach(p => {
-        const m = L.marker([p.lat, p.lng]).addTo(layerPubs)
-          .bindPopup(`<strong>${escapeHtml(p.name)}</strong><br/><span class="muted">${escapeHtml(p.city)}</span><br/>${p.price} — ${p.tags.map(t=>`<span class="pill">${escapeHtml(t)}</span>`).join(' ')}`);
-        markerIndex.set(p.id, m);
-      });
+      pubs.forEach(p=> markerForPub(p).addTo(layerPubs));
     }
-    renderPubs(PUBS_DEMO);
+    renderMarkers(PUBS);
 
-    // ---------------------------
-    // LISTE & TRI PAR DISTANCE
-    // ---------------------------
-    function computeDistanceMeters(a, b){
-      return L.latLng(a.lat, a.lng).distanceTo(L.latLng(b.lat, b.lng));
+    function applyUserLocation(lat,lng,accuracy=50){
+      if(userMarker){ map.removeLayer(userMarker); userMarker=null; }
+      if(userCircle){ map.removeLayer(userCircle); userCircle=null; }
+      userMarker = L.marker([lat,lng],{title:'Votre position'}).addTo(map).bindPopup('Vous êtes ici');
+      userCircle = L.circle([lat,lng],{radius: Math.max(accuracy,20), color:'#42b883', fillColor:'#42b883', fillOpacity:.15}).addTo(map);
     }
 
-    function updateList(userLoc){
-      const nearbyOn = els.toggleNearby.checked;
-      const radiusKm  = Number(els.radius.value);
-      const radiusM   = radiusKm * 1000;
-
-      const enriched = PUBS_DEMO.map(p => {
-        let dist = null;
-        if(userLoc){
-          dist = computeDistanceMeters({lat:p.lat,lng:p.lng}, userLoc);
-        }
-        return {...p, distance: dist};
-      });
-
-      let filtered = enriched;
-      if(nearbyOn && userLoc){
-        filtered = enriched.filter(p => p.distance !== null && p.distance <= radiusM);
-      }
-
-      // Trier : si userLoc présent => par distance, sinon par nom
-      filtered.sort((a,b) => {
-        if(userLoc){
-          return (a.distance??Infinity) - (b.distance??Infinity);
-        }
-        return a.name.localeCompare(b.name);
-      });
-
-      // Affichage liste
-      els.results.innerHTML = '';
-      if(filtered.length === 0){
-        const div = document.createElement('div');
-        div.className = 'msg warn';
-        div.textContent = nearbyOn && userLoc
-          ? `Aucun résultat dans ${radiusKm.toFixed(1)} km.`
-          : `Aucun résultat.`;
-        els.results.appendChild(div);
-      }else{
-        for(const p of filtered){
-          const item = document.createElement('div');
-          item.className = 'card';
-          const distStr = p.distance != null ? (p.distance/1000).toFixed(2) + ' km' : '—';
-          item.innerHTML = `
-            <div class="row">
-              <div>
-                <div><strong>${escapeHtml(p.name)}</strong></div>
-                <div class="muted">${escapeHtml(p.city)} • ${escapeHtml(p.price)} • ${p.tags.map(t=>`<span class="pill">${escapeHtml(t)}</span>`).join(' ')}</div>
-              </div>
-              <div class="distance">${distStr}</div>
-            </div>
-          `;
-          item.addEventListener('click', () => {
-            const m = markerIndex.get(p.id);
-            if(m){
-              map.setView(m.getLatLng(), Math.max(map.getZoom(), 14), {animate:true});
-              m.openPopup();
-            }
-          });
-          els.results.appendChild(item);
-        }
-      }
-
-      // Cacher/montrer marqueurs si mode À proximité actif
-      layerPubs.eachLayer(mk => {
-        mk.addTo(layerPubs); // no-op si déjà
-        if(nearbyOn && userLoc){
-          const latlng = mk.getLatLng();
-          const d = L.latLng(latlng.lat, latlng.lng).distanceTo(L.latLng(userLoc.lat, userLoc.lng));
-          if(d > radiusM){
-            layerPubs.removeLayer(mk);
-          }
-        }
-      });
-    }
-
-    // ---------------------------
-    // GÉOLOCALISATION
-    // ---------------------------
-    function setStatus(html, kind=''){
-      els.status.innerHTML = html;
-      els.status.className = 'status ' + (kind ? `msg ${kind}` : '');
-    }
-
-    function clearUserLocation(){
-      if(userMarker){ map.removeLayer(userMarker); userMarker = null; }
-      if(userCircle){ map.removeLayer(userCircle); userCircle = null; }
-    }
-
-    function applyUserLocation(lat, lng, accuracy){
-      clearUserLocation();
-      userMarker = L.marker([lat,lng], {title:'Votre position'}).addTo(map).bindPopup('Vous êtes ici');
-      const radius = Math.max(accuracy||50, 20);
-      userCircle = L.circle([lat,lng], {radius, color:'#42b883', fillColor:'#42b883', fillOpacity:.15}).addTo(map);
-    }
-
-    function saveUserLocation(lat,lng){
-      localStorage.setItem(LS_KEYS.LOC, JSON.stringify({lat,lng,ts:Date.now()}));
-    }
-    function loadUserLocation(){
-      try{
-        const raw = localStorage.getItem(LS_KEYS.LOC);
-        if(!raw) return null;
-        const obj = JSON.parse(raw);
-        if(obj && typeof obj.lat==='number' && typeof obj.lng==='number') return obj;
-      }catch{}
+    function saveLoc(lat,lng){ localStorage.setItem(LS.LOC, JSON.stringify({lat,lng,ts:Date.now()})); }
+    function loadLoc(){
+      try{ const raw = localStorage.getItem(LS.LOC); if(!raw) return null; const o = JSON.parse(raw); if(o && typeof o.lat==='number' && typeof o.lng==='number') return o; }catch(e){}
       return null;
     }
 
-    async function handleLocate(){
-      if(!('geolocation' in navigator)){
-        setStatus('❌ Géolocalisation non supportée par ce navigateur.', 'err');
-        return;
+    // =========================
+    // Nearby Filtering
+    // =========================
+    function distanceMeters(a,b){ return L.latLng(a.lat,a.lng).distanceTo(L.latLng(b.lat,b.lng)); }
+
+    function computeNearby(userLoc, radiusKm, mode){
+      const radM = radiusKm*1000;
+      const enriched = PUBS.map(p => ({...p, distance: userLoc ? distanceMeters({lat:p.lat,lng:p.lng}, userLoc) : null}));
+      let list = enriched;
+      if(mode === 'nearby' && userLoc){
+        list = enriched.filter(p => p.distance !== null && p.distance <= radM);
       }
-      setStatus('📍 Localisation en cours…', 'ok');
-      navigator.geolocation.getCurrentPosition(
-        pos => {
-          const { latitude:lat, longitude:lng, accuracy } = pos.coords;
-          applyUserLocation(lat, lng, accuracy);
-          saveUserLocation(lat, lng);
-          setStatus(`✅ Localisé (±${Math.round(accuracy||50)} m).`, 'ok');
-          // Ajuster vue
-          const nearbyOn = els.toggleNearby.checked;
-          const r = Number(els.radius.value) * 1000;
-          if(nearbyOn){
-            map.setView([lat,lng], 15);
-          }else{
-            // vue qui inclut le cercle et quelques pubs
-            map.setView([lat,lng], 14);
-          }
-          updateList({lat,lng});
-        },
-        err => {
-          if(err.code === err.PERMISSION_DENIED){
-            setStatus('🚫 Permission refusée. Active “À proximité” seulement avec une localisation.', 'warn');
-          }else if(err.code === err.POSITION_UNAVAILABLE){
-            setStatus('⚠️ Position indisponible. Réessaie plus tard.', 'warn');
-          }else if(err.code === err.TIMEOUT){
-            setStatus('⏳ Délai dépassé pour obtenir la position.', 'warn');
-          }else{
-            setStatus('❌ Erreur inconnue de géolocalisation.', 'err');
-          }
-        },
-        { enableHighAccuracy:true, timeout:10000, maximumAge:0 }
-      );
+      if(userLoc){
+        list.sort((a,b) => (a.distance??Infinity) - (b.distance??Infinity));
+      }else{
+        list.sort((a,b)=>a.name.localeCompare(b.name));
+      }
+      return list;
     }
 
-    // ---------------------------
-    // ÉVÈNEMENTS UI
-    // ---------------------------
-    els.radius.addEventListener('input', () => {
-      const v = Number(els.radius.value);
-      els.radiusLabel.textContent = v.toFixed(1);
-      localStorage.setItem(LS_KEYS.RADIUS, String(v));
-      const loc = getCurrentUserLoc();
-      updateList(loc);
-    });
+    function renderNearbyGrid(items){
+      const root = els.nearbyGrid; root.innerHTML = '';
+      if(items.length===0){
+        root.innerHTML = `<div class="pub-card"><p class="card-text">Aucun résultat dans ce rayon.</p></div>`;
+        return;
+      }
+      for(const p of items){
+        const dist = p.distance!=null ? `<div class="votes">${km(p.distance)}</div>` : '';
+        const tags = p.tags.map(t=>`<span class="pill">${escapeHtml(t)}</span>`).join(' ');
+        const el = document.createElement('div');
+        el.className = 'pub-card';
+        el.innerHTML = `
+          <img class="card-image" src="${escapeHtml(p.img)}" alt="${escapeHtml(p.name)}">
+          <h3 class="card-title">${escapeHtml(p.name)}</h3>
+          <p class="card-text">${escapeHtml(p.city)} — ${escapeHtml(p.desc)}</p>
+          <div class="rating"><div class="stars"><i class="fas fa-star"></i> ${p.rating.toFixed(1)}</div>${dist}</div>
+          <div>${tags}</div>
+          <div class="admin-actions">
+            <button class="admin-btn cyber-btn" onclick="console.log('edit pub', ${p.id})"><i class="fas fa-edit"></i> Modifier</button>
+            <button class="admin-btn cyber-btn-danger" onclick="console.log('delete pub', ${p.id})"><i class="fas fa-trash"></i> Supprimer</button>
+          </div>
+        `;
+        el.addEventListener('click', () => {
+          map.setView([p.lat,p.lng], Math.max(map.getZoom(), 14), {animate:true});
+        });
+        root.appendChild(el);
+      }
+    }
 
-    els.toggleNearby.addEventListener('change', () => {
-      localStorage.setItem(LS_KEYS.NEARBY, String(els.toggleNearby.checked));
-      const loc = getCurrentUserLoc(true);
-      if(els.toggleNearby.checked && !loc){
-        setStatus('ℹ️ Active “Localiser” pour filtrer à proximité.', 'warn');
+    function renderAllPubsGrid(items){
+      const root = els.allPubsGrid; root.innerHTML='';
+      for(const p of items){
+        const tags = p.tags.map(t=>`<span class="pill">${escapeHtml(t)}</span>`).join(' ');
+        const el = document.createElement('div');
+        el.className = 'pub-card';
+        el.innerHTML = `
+          <img class="card-image" src="${escapeHtml(p.img)}" alt="${escapeHtml(p.name)}">
+          <h3 class="card-title">${escapeHtml(p.name)}</h3>
+          <p class="card-text">${escapeHtml(p.city)} — ${escapeHtml(p.desc)}</p>
+          <div class="rating"><div class="stars"><i class="fas fa-star"></i> ${p.rating.toFixed(1)}</div></div>
+          <div>${tags}</div>
+        `;
+        root.appendChild(el);
+      }
+    }
+
+    function getUserLocCurrent(){
+      if(userMarker){ const ll = userMarker.getLatLng(); return {lat: ll.lat, lng: ll.lng}; }
+      return loadLoc();
+    }
+
+    // =========================
+    // UI Handlers
+    // =========================
+    function syncAndRender(){
+      const radiusKm = parseFloat(els.radius.value) || 2;
+      els.radiusVal.textContent = radiusKm.toFixed(1);
+      const mode = els.locationFilter.value;
+      localStorage.setItem(LS.RADIUS, String(radiusKm));
+      localStorage.setItem(LS.MODE, mode);
+
+      const userLoc = getUserLocCurrent();
+      const items = computeNearby(userLoc, radiusKm, mode);
+
+      // Si mode nearby sans localisation -> message
+      if(mode==='nearby' && !userLoc){
+        setStatus('ℹ️ Activez “📍 Localiser” pour filtrer à proximité.');
       }else{
         setStatus('');
       }
-      updateList(loc);
-    });
 
-    els.btnLocate.addEventListener('click', () => handleLocate());
-
-    els.btnReset.addEventListener('click', () => {
-      localStorage.removeItem(LS_KEYS.LOC);
-      clearUserLocation();
-      setStatus('🔄 Localisation effacée. Mode carte générale.', '');
-      updateList(null);
-    });
-
-    function getCurrentUserLoc(fromStorage=true){
-      if(userMarker){
-        const ll = userMarker.getLatLng();
-        return {lat: ll.lat, lng: ll.lng};
+      // Marqueurs : si nearby + userLoc => n’afficher que ceux dans le rayon
+      if(mode==='nearby' && userLoc){
+        const radM = radiusKm*1000;
+        renderMarkers(PUBS.filter(p => distanceMeters({lat:p.lat,lng:p.lng}, userLoc) <= radM));
+      }else{
+        renderMarkers(PUBS);
       }
-      if(fromStorage){
-        return loadUserLocation();
-      }
-      return null;
+
+      renderNearbyGrid(items);
+      renderAllPubsGrid(PUBS);
     }
 
-    // ---------------------------
-    // DÉMARRAGE
-    // ---------------------------
+    els.locationFilter.addEventListener('change', syncAndRender);
+    els.radius.addEventListener('input', syncAndRender);
+    els.btnResetLoc.addEventListener('click', () => {
+      localStorage.removeItem(LS.LOC);
+      if(userMarker){ map.removeLayer(userMarker); userMarker=null; }
+      if(userCircle){ map.removeLayer(userCircle); userCircle=null; }
+      setStatus('🔄 Localisation effacée. Mode carte générale.');
+      syncAndRender();
+    });
+
+    els.btnLocate.addEventListener('click', () => {
+      if(!('geolocation' in navigator)){
+        setStatus('❌ Géolocalisation non supportée par ce navigateur.');
+        return;
+      }
+      setStatus('📍 Localisation en cours…');
+      navigator.geolocation.getCurrentPosition(
+        pos => {
+          const { latitude:lat, longitude:lng, accuracy } = pos.coords;
+          applyUserLocation(lat,lng,accuracy);
+          saveLoc(lat,lng);
+          map.setView([lat,lng], 14);
+          setStatus(`✅ Localisé (±${Math.round(accuracy||50)} m).`);
+          syncAndRender();
+        },
+        err => {
+          if(err.code===err.PERMISSION_DENIED) setStatus('🚫 Permission refusée.');
+          else if(err.code===err.POSITION_UNAVAILABLE) setStatus('⚠️ Position indisponible.');
+          else if(err.code===err.TIMEOUT) setStatus('⏳ Délai dépassé.');
+          else setStatus('❌ Erreur inconnue de géolocalisation.');
+        },
+        { enableHighAccuracy:true, timeout:10000, maximumAge:0 }
+      );
+    });
+
+    // =========================
+    // Navigation entre vues
+    // =========================
+    document.querySelectorAll('.nav-link').forEach(link=>{
+      link.addEventListener('click', e=>{
+        e.preventDefault();
+        document.querySelectorAll('.nav-link').forEach(l=>l.classList.remove('active'));
+        link.classList.add('active');
+        const view = link.getAttribute('data-view');
+        ['map','beers','pubs','trophies','admin'].forEach(v=>{
+          const el = document.getElementById(v+'View');
+          if(el) el.style.display = (v===view)?'block':'none';
+        });
+        if(view==='map'){ setTimeout(()=>map.invalidateSize(), 150); }
+      });
+    });
+
+    // =========================
+    // Modals (Add Beer / Add Pub)
+    // =========================
+    function openModal(id){ document.getElementById(id).classList.add('open'); document.getElementById(id).setAttribute('aria-hidden','false'); }
+    function closeModal(el){ el.closest('.modal').classList.remove('open'); el.closest('.modal').setAttribute('aria-hidden','true'); }
+
+    document.getElementById('addBeerBtn').addEventListener('click', ()=>openModal('addBeerModal'));
+    document.getElementById('addPubBtn').addEventListener('click', ()=>openModal('addPubModal'));
+    document.querySelectorAll('[data-close]').forEach(btn=>btn.addEventListener('click', e=>closeModal(e.target)));
+    document.getElementById('beerForm').addEventListener('submit', e=>{e.preventDefault(); alert('Bière ajoutée (démo).'); closeModal(e.target);});
+    document.getElementById('pubForm').addEventListener('submit', e=>{e.preventDefault(); alert('Pub ajouté (démo).'); closeModal(e.target);});
+
+    // =========================
+    // Boot: charger préférences & dessiner
+    // =========================
     (function boot(){
-      // Si on a une localisation mémorisée, l'afficher
-      const saved = loadUserLocation();
-      if(saved){
-        applyUserLocation(saved.lat, saved.lng, 50);
-        // Ne pas forcer le recentrage si l’utilisateur veut regarder ailleurs
-      }
-      // Peupler la liste initiale
-      updateList(saved || null);
-    })();
+      const savedRadius = parseFloat(localStorage.getItem(LS.RADIUS) || '2');
+      const savedMode = localStorage.getItem(LS.MODE) || 'nearby';
+      els.radius.value = isFinite(savedRadius) ? savedRadius : 2;
+      els.radiusVal.textContent = parseFloat(els.radius.value).toFixed(1);
+      els.locationFilter.value = (savedMode==='all' || savedMode==='nearby') ? savedMode : 'nearby';
 
-    // ---------------------------
-    // Utils
-    // ---------------------------
-    function escapeHtml(str){
-      return String(str).replace(/[&<>"'`=\/]/g, s => ({
-        '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','`':'&#96;','=':'&#61;','/':'&#47;'
-      }[s]));
-    }
+      const saved = loadLoc();
+      if(saved){ applyUserLocation(saved.lat, saved.lng, 50); }
+      renderAllPubsGrid(PUBS);
+      syncAndRender();
+    })();
   </script>
 </body>
 </html>
